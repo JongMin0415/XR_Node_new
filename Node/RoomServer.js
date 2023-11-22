@@ -30,17 +30,17 @@ wss.on('connection' , function connections(ws){                 //커넥션이 �
 
         if(requestType == 100)  //방 생성
         {
-            
+            create.createRoom(params, rooms, ws);
         }
 
         if(requestType == 200)  //방입장
         {
-            
+            joinRoom(params,ws);
         }
 
         if(requestType == 300)  //방 퇴실
         {
-            
+            leaveRoom(params);
         }
 
         if(requestType == 0)    //전체 에코
@@ -85,6 +85,69 @@ wss.on('connection' , function connections(ws){                 //커넥션이 �
         }
 
         ws.send(JSON.stringify(obj));
+    }
+
+    function joinRoom(params , ws)
+    {
+        const room = params;
+        if(!Object.keys(rooms).includes(room))
+        {
+            console.warn(room+ 'does net exist'); //룸이 없다는 경고 콘솔
+            return;
+        }
+
+        if(rooms[room].length >= maxClients) {
+            console.warn(room + ' is full');
+            return;
+        }
+
+        rooms[room].push(ws);
+        ws["room"] = room;
+
+        generalInformation(ws);
+
+        var UserList = "";
+
+        for(let i = 0 ; i < rooms[room].length; i++)
+        {
+            UserList += "User : " + rooms[room][i].user + " \n";
+        }
+        joinuserTemp += 1;
+
+        obj = {
+            "type" : "info",
+            "myParams" : {
+                "room" : ws["room"],
+                "UserList" : UserList
+            }
+        }
+
+        for(var i = 0 ; i < rooms[room].length; i++)
+        {
+            rooms[room][i].send(JSON.stringify(obj));
+        }
+    }
+
+    function leaveRoom(params)
+    {
+        const room = ws.room;
+
+        if(rooms[room].length > 0)
+        {
+            rooms[room] = rooms[room].filter(so => so !== ws);
+
+            ws["room"] = undefined;
+
+            if(rooms[room].length ==0)
+            {
+                close(room);
+            }
+        }
+
+        function close(room) {
+            if(rooms.length > 0)
+            rooms = rooms.filter(key => key !== room);
+        }
     }
 
     wss.on('listening' , () => {
